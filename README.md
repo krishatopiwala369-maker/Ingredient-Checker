@@ -17,3 +17,4 @@ The app will tell you if any harmful ingredients are present.
 
 ## 🌱 Purpose
 This project helps people make safer food choices, especially those with allergies.
+ 
