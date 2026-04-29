@@ -1,4 +1,5 @@
 import streamlit as st
+st.caption("Quickly check if your food contains palm oil or maida")
 
 # Page config
 st.set_page_config(page_title="Ingredient Checker", page_icon="🌿", layout="centered")
