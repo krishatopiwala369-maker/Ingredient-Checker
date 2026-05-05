@@ -6,42 +6,62 @@ import io
 # Page setup
 st.set_page_config(page_title="Ingredient Checker", page_icon="🌿", layout="centered")
 
+# 🎨 Theme Switch
+theme = st.radio("🎨 Choose Theme", ["Light", "Dark"])
+
+if theme == "Light":
+    bg = "linear-gradient(135deg, #e8f5e9, #ffffff)"
+    text_color = "#2e7d32"
+    box_safe = "#e8f5e9"
+    box_unsafe = "#ffebee"
+else:
+    bg = "linear-gradient(135deg, #1b1b1b, #2c2c2c)"
+    text_color = "#ffffff"
+    box_safe = "#1e4620"
+    box_unsafe = "#5c1c1c"
+
 # Styling
-st.markdown("""
+st.markdown(f"""
 <style>
-[data-testid="stAppViewContainer"] {
-    background: linear-gradient(135deg, #e8f5e9, #ffffff);
-}
-.title {
+[data-testid="stAppViewContainer"] {{
+    background: {bg};
+    color: {text_color};
+}}
+
+.title {{
     text-align: center;
     font-size: 40px;
     font-weight: bold;
-    color: #2e7d32;
-}
-.subtitle {
+    color: {text_color};
+}}
+
+.subtitle {{
     text-align: center;
-    color: #555;
+    color: {text_color};
     margin-bottom: 25px;
-}
-.safe-box {
+}}
+
+.safe-box {{
     padding: 15px;
     border-radius: 12px;
-    background-color: #e8f5e9;
-    color: #2e7d32;
+    background-color: {box_safe};
+    color: {text_color};
     margin-top: 20px;
-}
-.not-safe-box {
+}}
+
+.not-safe-box {{
     padding: 15px;
     border-radius: 12px;
-    background-color: #ffebee;
-    color: #c62828;
+    background-color: {box_unsafe};
+    color: {text_color};
     margin-top: 20px;
-}
-mark {
+}}
+
+mark {{
     background-color: #ffcdd2;
     padding: 2px 5px;
     border-radius: 4px;
-}
+}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -49,7 +69,7 @@ mark {
 st.markdown('<div class="title">🌿 Ingredient Checker</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle">Type or scan ingredients</div>', unsafe_allow_html=True)
 
-# 🧍‍♀️ Allergy Profile Mode
+# 👤 Allergy Profile
 st.markdown("### ⚙️ Select what you want to avoid")
 
 avoid_palm = st.checkbox("🌴 Palm Oil")
@@ -84,10 +104,10 @@ def highlight_text(text, words):
         text = text.replace(word, f"<mark>{word}</mark>")
     return text
 
-# Text input
+# Input
 user_input = st.text_area("📝 Enter ingredients:")
 
-# Image upload
+# 📸 Image upload
 uploaded_file = st.file_uploader("📸 Upload ingredient image", type=["png", "jpg", "jpeg"])
 
 image_text = ""
@@ -96,7 +116,6 @@ if uploaded_file:
     image = Image.open(uploaded_file)
     st.image(image, caption="Uploaded Image", use_column_width=True)
 
-    # Convert to grayscale
     gray_image = image.convert("L")
 
     img_bytes = io.BytesIO()
@@ -123,7 +142,7 @@ if uploaded_file:
         else:
             st.error("⚠️ OCR failed. Try a clearer image")
 
-# Combine inputs
+# Combine
 final_text = (user_input + " " + image_text).lower()
 
 # Button
@@ -150,7 +169,7 @@ if st.button("🔍 Check Ingredients"):
             if item in final_text:
                 found.append(item)
 
-    found = list(set(found))  # remove duplicates
+    found = list(set(found))
 
     if found:
         count = len(found)
