@@ -1,9 +1,5 @@
 import streamlit as st
-from PIL import Image
-import pytesseract
-
-# 🔗 Connect Tesseract (IMPORTANT)
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+import requests
 
 # Page setup
 st.set_page_config(page_title="Ingredient Checker", page_icon="🌿", layout="centered")
@@ -70,23 +66,34 @@ def highlight_text(text, words):
         text = text.replace(word, f"<mark>{word}</mark>")
     return text
 
-# ✍️ Text input
+# Text input
 user_input = st.text_area("📝 Enter ingredients:")
 
-# 📸 Image upload
+# Image upload (API-based OCR)
 uploaded_file = st.file_uploader("📸 Upload ingredient image", type=["png", "jpg", "jpeg"])
 
 image_text = ""
 
 if uploaded_file:
-    image = Image.open(uploaded_file)
-    st.image(image, caption="Uploaded Image", use_column_width=True)
+    st.image(uploaded_file, caption="Uploaded Image", use_column_width=True)
 
-    image_text = pytesseract.image_to_string(image)
-    st.markdown("### 🧾 Extracted Text:")
-    st.write(image_text)
+    with st.spinner("🔍 Reading image..."):
+        response = requests.post(
+            "https://api.ocr.space/parse/image",
+            files={"file": uploaded_file.getvalue()},
+            data={"apikey": "helloworld"}
+        )
 
-# Combine both
+        result = response.json()
+
+        try:
+            image_text = result["ParsedResults"][0]["ParsedText"]
+            st.markdown("### 🧾 Extracted Text:")
+            st.write(image_text)
+        except:
+            st.error("⚠️ Could not read text from image")
+
+# Combine both inputs
 final_text = (user_input + " " + image_text).lower()
 
 # Button
