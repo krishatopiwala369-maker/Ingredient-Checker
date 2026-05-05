@@ -20,11 +20,11 @@ theme = st.radio("🎨 Choose Theme", ["Light", "Dark"])
 if theme == "Light":
     bg = "linear-gradient(135deg, #e8f5e9, #ffffff)"
     text_color = "#2e7d32"
-    card_bg = "rgba(255,255,255,0.8)"
+    card_bg = "rgba(255,255,255,0.9)"
 else:
     bg = "linear-gradient(135deg, #1b1b1b, #2c2c2c)"
     text_color = "#ffffff"
-    card_bg = "rgba(40,40,40,0.8)"
+    card_bg = "rgba(40,40,40,0.9)"
 
 # Styling
 st.markdown(f"""
@@ -48,23 +48,13 @@ st.markdown(f"""
     background: {card_bg};
 }}
 
-.history-btn {{
-    width: 100%;
-    text-align: left;
-    padding: 10px;
-    border-radius: 10px;
-    border: none;
-    margin-top: 5px;
-    background: {card_bg};
-    cursor: pointer;
-}}
 </style>
 """, unsafe_allow_html=True)
 
 # Title
 st.markdown('<div class="title">🌿 Ingredient Checker</div>', unsafe_allow_html=True)
 
-# 👤 Profile
+# Profile
 st.markdown("### ⚙️ Select what you want to avoid")
 avoid_palm = st.checkbox("🌴 Palm Oil")
 avoid_maida = st.checkbox("🌾 Maida")
@@ -87,14 +77,14 @@ explanations = {
 }
 
 alternatives = {
-    "palm oil": "Use ghee or coconut oil 🌿",
-    "maida": "Use whole wheat 🌾",
-    "milk": "Use almond/oat milk 🥛",
-    "peanut": "Use seeds 🌻",
-    "cashew": "Use roasted chana 🌰"
+    "palm oil": "ghee or coconut oil",
+    "maida": "whole wheat flour",
+    "milk": "almond or oat milk",
+    "peanut": "sunflower or pumpkin seeds",
+    "cashew": "roasted chana"
 }
 
-# Time formatter
+# Time function
 def time_ago(t):
     diff = datetime.now() - t
     if diff.seconds < 60:
@@ -117,12 +107,14 @@ if uploaded_file:
 # Button
 if st.button("🔍 Check Ingredients"):
 
+    # Progress animation
     progress = st.progress(0)
     for i in range(100):
         time.sleep(0.01)
         progress.progress(i+1)
     progress.empty()
 
+    # OCR
     if uploaded_file:
         gray = image.convert("L")
         img_bytes = io.BytesIO()
@@ -139,6 +131,7 @@ if st.button("🔍 Check Ingredients"):
 
     final_text = (user_input + " " + image_text).lower()
 
+    # Detection
     found = []
     if avoid_palm:
         found += [i for i in palm_oil_names if i in final_text]
@@ -151,6 +144,19 @@ if st.button("🔍 Check Ingredients"):
 
     found = list(set(found))
 
+    # 📊 RISK METER
+    risk_score = len(found)
+
+    st.markdown("### 📊 Risk Level")
+    st.progress(min(risk_score * 25, 100))
+
+    if risk_score == 0:
+        st.success("🟢 Low Risk")
+    elif risk_score <= 2:
+        st.warning("🟡 Medium Risk")
+    else:
+        st.error("🔴 High Risk")
+
     # Save history
     st.session_state.history.insert(0, {
         "text": final_text,
@@ -158,14 +164,31 @@ if st.button("🔍 Check Ingredients"):
         "time": datetime.now()
     })
 
-# 🧾 HISTORY
+    # Results
+    if found:
+        st.markdown("### 💡 Insights")
+
+        for item in found:
+            for key in explanations:
+                if key in item:
+                    st.markdown(f"""
+                    <div class="card">
+                        <b>❌ {item}</b><br>
+                        👉 {explanations.get(key,"")}<br>
+                        💡 Use <b>{alternatives.get(key,"")}</b> instead
+                    </div>
+                    """, unsafe_allow_html=True)
+    else:
+        st.success("✅ Safe to Use")
+
+# HISTORY
 st.markdown("### 🧾 History")
 
 for i, item in enumerate(st.session_state.history[:5]):
     if st.button(f"{time_ago(item['time'])} • {'Not Safe' if item['found'] else 'Safe'}", key=i):
         st.session_state.selected = item
 
-# 🧠 Show selected
+# Details view
 if st.session_state.selected:
     data = st.session_state.selected
     st.markdown("### 🔍 Details")
@@ -178,7 +201,7 @@ if st.session_state.selected:
                     <div class="card">
                         <b>❌ {item}</b><br>
                         👉 {explanations.get(key,"")}<br>
-                        💡 {alternatives.get(key,"")}
+                        💡 Use <b>{alternatives.get(key,"")}</b> instead
                     </div>
                     """, unsafe_allow_html=True)
     else:
