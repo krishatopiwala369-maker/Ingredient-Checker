@@ -49,6 +49,14 @@ mark {
 st.markdown('<div class="title">🌿 Ingredient Checker</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle">Type or scan ingredients</div>', unsafe_allow_html=True)
 
+# 🧍‍♀️ Allergy Profile Mode
+st.markdown("### ⚙️ Select what you want to avoid")
+
+avoid_palm = st.checkbox("🌴 Palm Oil")
+avoid_maida = st.checkbox("🌾 Maida (Refined Flour)")
+avoid_milk = st.checkbox("🥛 Milk")
+avoid_nuts = st.checkbox("🥜 Nuts")
+
 # Ingredient lists
 palm_oil_names = [
     "palm oil", "palmolein", "palm kernel oil", "palm kernel",
@@ -60,6 +68,14 @@ palm_oil_names = [
 maida_names = [
     "maida", "refined wheat flour", "white flour",
     "all-purpose flour", "enriched flour"
+]
+
+milk_names = [
+    "milk", "milk solids", "whey", "casein", "butter", "cheese"
+]
+
+nut_names = [
+    "almond", "cashew", "peanut", "walnut", "hazelnut"
 ]
 
 # Highlight function
@@ -80,10 +96,9 @@ if uploaded_file:
     image = Image.open(uploaded_file)
     st.image(image, caption="Uploaded Image", use_column_width=True)
 
-    # Convert image to grayscale (better OCR)
+    # Convert to grayscale
     gray_image = image.convert("L")
 
-    # Convert to bytes
     img_bytes = io.BytesIO()
     gray_image.save(img_bytes, format="PNG")
     img_bytes = img_bytes.getvalue()
@@ -92,20 +107,15 @@ if uploaded_file:
         response = requests.post(
             "https://api.ocr.space/parse/image",
             files={"file": ("image.png", img_bytes)},
-            data={
-                "apikey": "helloworld",
-                "language": "eng",
-                "isOverlayRequired": False
-            }
+            data={"apikey": "helloworld", "language": "eng"}
         )
 
         result = response.json()
 
         if result.get("IsErroredOnProcessing") == False:
-            parsed_results = result.get("ParsedResults")
-
-            if parsed_results:
-                image_text = parsed_results[0].get("ParsedText", "")
+            parsed = result.get("ParsedResults")
+            if parsed:
+                image_text = parsed[0].get("ParsedText", "")
                 st.markdown("### 🧾 Extracted Text:")
                 st.write(image_text)
             else:
@@ -120,9 +130,27 @@ final_text = (user_input + " " + image_text).lower()
 if st.button("🔍 Check Ingredients"):
     found = []
 
-    for item in palm_oil_names + maida_names:
-        if item in final_text:
-            found.append(item)
+    if avoid_palm:
+        for item in palm_oil_names:
+            if item in final_text:
+                found.append(item)
+
+    if avoid_maida:
+        for item in maida_names:
+            if item in final_text:
+                found.append(item)
+
+    if avoid_milk:
+        for item in milk_names:
+            if item in final_text:
+                found.append(item)
+
+    if avoid_nuts:
+        for item in nut_names:
+            if item in final_text:
+                found.append(item)
+
+    found = list(set(found))  # remove duplicates
 
     if found:
         count = len(found)
