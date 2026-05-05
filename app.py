@@ -1,5 +1,7 @@
 import streamlit as st
 import requests
+from PIL import Image
+import io
 
 # Page setup
 st.set_page_config(page_title="Ingredient Checker", page_icon="🌿", layout="centered")
@@ -69,31 +71,49 @@ def highlight_text(text, words):
 # Text input
 user_input = st.text_area("📝 Enter ingredients:")
 
-# Image upload (API-based OCR)
+# Image upload
 uploaded_file = st.file_uploader("📸 Upload ingredient image", type=["png", "jpg", "jpeg"])
 
 image_text = ""
 
 if uploaded_file:
-    st.image(uploaded_file, caption="Uploaded Image", use_column_width=True)
+    image = Image.open(uploaded_file)
+    st.image(image, caption="Uploaded Image", use_column_width=True)
+
+    # Convert image to grayscale (better OCR)
+    gray_image = image.convert("L")
+
+    # Convert to bytes
+    img_bytes = io.BytesIO()
+    gray_image.save(img_bytes, format="PNG")
+    img_bytes = img_bytes.getvalue()
 
     with st.spinner("🔍 Reading image..."):
         response = requests.post(
             "https://api.ocr.space/parse/image",
-            files={"file": uploaded_file.getvalue()},
-            data={"apikey": "helloworld"}
+            files={"file": ("image.png", img_bytes)},
+            data={
+                "apikey": "helloworld",
+                "language": "eng",
+                "isOverlayRequired": False
+            }
         )
 
         result = response.json()
 
-        try:
-            image_text = result["ParsedResults"][0]["ParsedText"]
-            st.markdown("### 🧾 Extracted Text:")
-            st.write(image_text)
-        except:
-            st.error("⚠️ Could not read text from image")
+        if result.get("IsErroredOnProcessing") == False:
+            parsed_results = result.get("ParsedResults")
 
-# Combine both inputs
+            if parsed_results:
+                image_text = parsed_results[0].get("ParsedText", "")
+                st.markdown("### 🧾 Extracted Text:")
+                st.write(image_text)
+            else:
+                st.error("⚠️ No text found in image")
+        else:
+            st.error("⚠️ OCR failed. Try a clearer image")
+
+# Combine inputs
 final_text = (user_input + " " + image_text).lower()
 
 # Button
