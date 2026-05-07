@@ -160,22 +160,26 @@ def time_ago(t):
     else:
         return f"{diff.seconds // 3600}h ago"
 
-# 📝 Input
+# 📝 Manual ingredient input
 user_input = st.text_area("📝 Enter ingredients")
 
-# 📸 Upload image
+# 📸 Ingredient image upload
 uploaded_file = st.file_uploader(
     "📸 Upload ingredient image",
     type=["png", "jpg", "jpeg"]
 )
+
+# 📦 Barcode image upload
 barcode_file = st.file_uploader(
     "📦 Upload barcode image",
     type=["png", "jpg", "jpeg"],
     key="barcode"
 )
+
 image_text = ""
 barcode_data = ""
 
+# 📦 Barcode scanner
 if barcode_file:
 
     file_bytes = np.asarray(
@@ -190,9 +194,9 @@ if barcode_file:
 
     detector = cv2.barcode.BarcodeDetector()
 
-    success, decoded_info, decoded_type, points = detector.detectAndDecode(img)
+    decoded_info, decoded_type, points = detector.detectAndDecode(img)
 
-    if success and decoded_info:
+    if decoded_info:
 
         barcode_data = decoded_info
 
@@ -201,11 +205,12 @@ if barcode_file:
     else:
         st.error("❌ No barcode detected")
 
+# 📸 Show uploaded ingredient image
 if uploaded_file:
     image = Image.open(uploaded_file)
     st.image(image, use_column_width=True)
 
-# 🔍 Check button
+# 🔍 Main button
 if st.button("🔍 Check Ingredients"):
 
     st.markdown("### 🔍 Scanning ingredients...")
