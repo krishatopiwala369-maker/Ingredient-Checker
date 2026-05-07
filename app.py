@@ -4,13 +4,20 @@ from PIL import Image
 import io
 import time
 from datetime import datetime
+import cv2
+import numpy as np
 
-# Page setup
-st.set_page_config(page_title="Ingredient Checker", page_icon="🌿", layout="centered")
+# 🌿 Page setup
+st.set_page_config(
+    page_title="Ingredient Checker",
+    page_icon="🌿",
+    layout="centered"
+)
 
-# Session state
+# 🧠 Session state
 if "history" not in st.session_state:
     st.session_state.history = []
+
 if "selected" not in st.session_state:
     st.session_state.selected = None
 
@@ -20,193 +27,356 @@ theme = st.radio("🎨 Choose Theme", ["Light", "Dark"])
 if theme == "Light":
     bg = "linear-gradient(135deg, #e8f5e9, #ffffff)"
     text_color = "#2e7d32"
-    card_bg = "rgba(255,255,255,0.9)"
 else:
-    bg = "linear-gradient(135deg, #1b1b1b, #2c2c2c)"
+    bg = "linear-gradient(135deg, #111111, #2c2c2c)"
     text_color = "#ffffff"
-    card_bg = "rgba(40,40,40,0.9)"
 
-# Styling
+# ✨ Styling
 st.markdown(f"""
 <style>
+
 [data-testid="stAppViewContainer"] {{
     background: {bg};
     color: {text_color};
 }}
 
+[data-testid="stHeader"] {{
+    background: rgba(0,0,0,0);
+}}
+
+[data-testid="stToolbar"] {{
+    right: 2rem;
+}}
+
+h1, h2, h3, h4, h5, h6, p, label, div, span {{
+    color: {text_color} !important;
+}}
+
 .title {{
     text-align: center;
-    font-size: 40px;
+    font-size: 42px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}}
+
+.subtitle {{
+    text-align: center;
+    font-size: 16px;
+    opacity: 0.8;
+    margin-bottom: 25px;
+}}
+
+.stButton > button {{
+    border-radius: 12px;
+    transition: 0.3s;
     font-weight: bold;
 }}
 
-.card {{
-    padding: 15px;
-    border-radius: 16px;
-    margin-top: 15px;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-    background: {card_bg};
+.stButton > button:hover {{
+    transform: scale(1.03);
 }}
 
 </style>
 """, unsafe_allow_html=True)
 
-# Title
-st.markdown('<div class="title">🌿 Ingredient Checker</div>', unsafe_allow_html=True)
+# 🌿 Title
+st.markdown(
+    '<div class="title">🌿 Ingredient Checker</div>',
+    unsafe_allow_html=True
+)
 
-# Profile
-st.markdown("### ⚙️ Select what you want to avoid")
+st.markdown(
+    '<div class="subtitle">Scan smarter. Eat safer.</div>',
+    unsafe_allow_html=True
+)
+
+# ⚙️ Preferences
+st.markdown("### ⚙️ What do you want to avoid?")
+
 avoid_palm = st.checkbox("🌴 Palm Oil")
 avoid_maida = st.checkbox("🌾 Maida")
 avoid_milk = st.checkbox("🥛 Milk")
 avoid_nuts = st.checkbox("🥜 Nuts")
 
-# Ingredient lists
-palm_oil_names = ["palm oil", "palmolein", "palm kernel oil", "e471"]
-maida_names = ["maida", "refined wheat flour"]
-milk_names = ["milk", "whey", "casein"]
-nut_names = ["peanut", "cashew", "almond"]
+# 📦 Ingredient lists
+palm_oil_names = [
+    "palm oil",
+    "palmolein",
+    "palm kernel oil",
+    "e471",
+    "e472",
+    "shortening"
+]
 
-# Info
+maida_names = [
+    "maida",
+    "refined wheat flour",
+    "all-purpose flour"
+]
+
+milk_names = [
+    "milk",
+    "whey",
+    "casein",
+    "butter"
+]
+
+nut_names = [
+    "peanut",
+    "cashew",
+    "almond",
+    "walnut"
+]
+
+# 💡 Explanations
 explanations = {
     "palm oil": "Highly processed and may trigger allergies.",
     "maida": "Refined flour with low nutrients.",
-    "milk": "May cause lactose issues.",
-    "peanut": "Common allergen.",
+    "milk": "May cause issues for lactose intolerance.",
+    "peanut": "Common allergen causing reactions.",
     "cashew": "Tree nut allergen."
 }
 
+# 🌿 Alternatives
 alternatives = {
-    "palm oil": "ghee or coconut oil",
-    "maida": "whole wheat flour",
-    "milk": "almond or oat milk",
-    "peanut": "sunflower or pumpkin seeds",
-    "cashew": "roasted chana"
+    "palm oil": "ghee or coconut oil 🌿",
+    "maida": "whole wheat flour 🌾",
+    "milk": "almond or oat milk 🥛",
+    "peanut": "sunflower or pumpkin seeds 🌻",
+    "cashew": "roasted chana 🌰"
 }
 
-# Time function
+# ⏳ Time formatter
 def time_ago(t):
+
     diff = datetime.now() - t
+
     if diff.seconds < 60:
         return f"{diff.seconds}s ago"
+
     elif diff.seconds < 3600:
-        return f"{diff.seconds//60}m ago"
+        return f"{diff.seconds // 60}m ago"
+
     else:
-        return f"{diff.seconds//3600}h ago"
+        return f"{diff.seconds // 3600}h ago"
 
-# Input
-user_input = st.text_area("📝 Enter ingredients:")
-uploaded_file = st.file_uploader("📸 Upload image", type=["png","jpg","jpeg"])
+# 📝 Input
+user_input = st.text_area("📝 Enter ingredients")
 
+# 📸 Upload image
+uploaded_file = st.file_uploader(
+    "📸 Upload ingredient image",
+    type=["png", "jpg", "jpeg"]
+)
+barcode_file = st.file_uploader(
+    "📦 Upload barcode image",
+    type=["png", "jpg", "jpeg"],
+    key="barcode"
+)
 image_text = ""
+barcode_data = ""
+
+if barcode_file:
+
+    file_bytes = np.asarray(
+        bytearray(barcode_file.read()),
+        dtype=np.uint8
+    )
+
+    img = cv2.imdecode(
+        file_bytes,
+        cv2.IMREAD_COLOR
+    )
+
+    detector = cv2.barcode.BarcodeDetector()
+
+    success, decoded_info, decoded_type, points = detector.detectAndDecode(img)
+
+    if success and decoded_info:
+
+        barcode_data = decoded_info
+
+        st.success(f"📦 Barcode Detected: {barcode_data}")
+
+    else:
+        st.error("❌ No barcode detected")
 
 if uploaded_file:
     image = Image.open(uploaded_file)
-    st.image(image)
+    st.image(image, use_column_width=True)
 
-# Button
+# 🔍 Check button
 if st.button("🔍 Check Ingredients"):
 
-    # Progress animation
+    st.markdown("### 🔍 Scanning ingredients...")
+
     progress = st.progress(0)
+
     for i in range(100):
         time.sleep(0.01)
-        progress.progress(i+1)
+        progress.progress(i + 1)
+
     progress.empty()
 
-    # OCR
+    # 📸 OCR
     if uploaded_file:
+
         gray = image.convert("L")
+
         img_bytes = io.BytesIO()
+
         gray.save(img_bytes, format="PNG")
 
-        res = requests.post(
+        response = requests.post(
             "https://api.ocr.space/parse/image",
-            files={"file": ("img.png", img_bytes.getvalue())},
-            data={"apikey": "helloworld"}
-        ).json()
+            files={
+                "file": (
+                    "img.png",
+                    img_bytes.getvalue()
+                )
+            },
+            data={
+                "apikey": "helloworld"
+            }
+        )
 
-        if not res.get("IsErroredOnProcessing"):
-            image_text = res["ParsedResults"][0]["ParsedText"]
+        result = response.json()
 
-    final_text = (user_input + " " + image_text).lower()
+        if not result.get("IsErroredOnProcessing"):
 
-    # Detection
+            image_text = result["ParsedResults"][0]["ParsedText"]
+
+            st.markdown("### 🧾 Extracted Text")
+            st.write(image_text)
+
+        else:
+            st.error("⚠️ OCR failed")
+
+    # 🧠 Combine text
+    final_text = (
+        user_input + " " + image_text
+    ).lower()
+
+    # 🎯 Detection
     found = []
+
     if avoid_palm:
-        found += [i for i in palm_oil_names if i in final_text]
+        found += [
+            i for i in palm_oil_names
+            if i in final_text
+        ]
+
     if avoid_maida:
-        found += [i for i in maida_names if i in final_text]
+        found += [
+            i for i in maida_names
+            if i in final_text
+        ]
+
     if avoid_milk:
-        found += [i for i in milk_names if i in final_text]
+        found += [
+            i for i in milk_names
+            if i in final_text
+        ]
+
     if avoid_nuts:
-        found += [i for i in nut_names if i in final_text]
+        found += [
+            i for i in nut_names
+            if i in final_text
+        ]
 
     found = list(set(found))
 
-    # 📊 RISK METER
+    # 📊 Risk Meter
     risk_score = len(found)
 
     st.markdown("### 📊 Risk Level")
+
     st.progress(min(risk_score * 25, 100))
 
     if risk_score == 0:
         st.success("🟢 Low Risk")
+
     elif risk_score <= 2:
         st.warning("🟡 Medium Risk")
+
     else:
         st.error("🔴 High Risk")
 
-    # Save history
+    # 🧾 Save history
     st.session_state.history.insert(0, {
         "text": final_text,
         "found": found,
         "time": datetime.now()
     })
 
-    # Results
+    # 💡 Results
     if found:
+
         st.markdown("### 💡 Insights")
 
         for item in found:
+
             for key in explanations:
+
                 if key in item:
-                    st.markdown(f"""
-                    <div class="card">
-                        <b>❌ {item}</b><br>
-                        👉 {explanations.get(key,"")}<br>
-                        💡 Use <b>{alternatives.get(key,"")}</b> instead
-                    </div>
-                    """, unsafe_allow_html=True)
+
+                    st.info(f"""
+❌ {item}
+
+👉 {explanations.get(key,"")}
+
+💡 Use {alternatives.get(key,"")} instead
+""")
+
     else:
         st.success("✅ Safe to Use")
 
-# HISTORY
-st.markdown("### 🧾 History")
+# 🧾 History
+st.markdown("### 🧾 Scan History")
 
 for i, item in enumerate(st.session_state.history[:5]):
-    if st.button(f"{time_ago(item['time'])} • {'Not Safe' if item['found'] else 'Safe'}", key=i):
+
+    label = (
+        f"{time_ago(item['time'])} • "
+        f"{'Not Safe' if item['found'] else 'Safe'}"
+    )
+
+    if st.button(label, key=i):
+
         st.session_state.selected = item
 
-# Details view
+# 🔍 Previous details
 if st.session_state.selected:
+
     data = st.session_state.selected
-    st.markdown("### 🔍 Details")
+
+    st.markdown("### 🔍 Previous Scan Details")
 
     if data["found"]:
+
         for item in data["found"]:
+
             for key in explanations:
+
                 if key in item:
-                    st.markdown(f"""
-                    <div class="card">
-                        <b>❌ {item}</b><br>
-                        👉 {explanations.get(key,"")}<br>
-                        💡 Use <b>{alternatives.get(key,"")}</b> instead
-                    </div>
-                    """, unsafe_allow_html=True)
+
+                    st.info(f"""
+❌ {item}
+
+👉 {explanations.get(key,"")}
+
+💡 Use {alternatives.get(key,"")} instead
+""")
+
     else:
         st.success("✅ Safe")
 
-# Clear
+# 🗑️ Clear history
 if st.button("🗑️ Clear History"):
     st.session_state.history = []
+
+# 🌿 Footer
+st.markdown(
+    "<center>🌿 Made for safer choices</center>",
+    unsafe_allow_html=True
+)
