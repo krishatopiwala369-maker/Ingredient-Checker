@@ -4,6 +4,7 @@ from PIL import Image
 import io
 import time
 from datetime import datetime
+
 # 🌿 Page setup
 st.set_page_config(
     page_title="Ingredient Checker",
@@ -24,6 +25,7 @@ theme = st.radio("🎨 Choose Theme", ["Light", "Dark"])
 if theme == "Light":
     bg = "linear-gradient(135deg, #e8f5e9, #ffffff)"
     text_color = "#2e7d32"
+
 else:
     bg = "linear-gradient(135deg, #111111, #2c2c2c)"
     text_color = "#ffffff"
@@ -95,7 +97,7 @@ avoid_maida = st.checkbox("🌾 Maida")
 avoid_milk = st.checkbox("🥛 Milk")
 avoid_nuts = st.checkbox("🥜 Nuts")
 
-# 📦 Ingredient lists
+# 🌴 Palm Oil Hidden Names
 palm_oil_names = [
 
     "palm oil",
@@ -119,20 +121,14 @@ palm_oil_names = [
     "e481",
     "e482",
 
-    "sodium laureth sulfate",
-    "glyceryl stearate",
-    "stearic acid",
-    "palmitic acid",
-    "cetyl alcohol",
-    "lauryl alcohol",
-    "lauric acid",
-
     "mono and diglycerides",
     "mono-diglycerides",
 
     "emulsifier 471",
     "emulsifier 472"
 ]
+
+# 🌾 Maida Hidden Names
 maida_names = [
 
     "maida",
@@ -145,6 +141,8 @@ maida_names = [
 
     "refined cereal flour"
 ]
+
+# 🥛 Milk Hidden Names
 milk_names = [
 
     "milk",
@@ -172,6 +170,7 @@ milk_names = [
     "milk fat"
 ]
 
+# 🥜 Nut Hidden Names
 nut_names = [
 
     "peanut",
@@ -196,19 +195,29 @@ nut_names = [
 
 # 💡 Explanations
 explanations = {
+
     "palm oil": "Highly processed and may trigger allergies.",
+
     "maida": "Refined flour with low nutrients.",
+
     "milk": "May cause issues for lactose intolerance.",
+
     "peanut": "Common allergen causing reactions.",
+
     "cashew": "Tree nut allergen."
 }
 
 # 🌿 Alternatives
 alternatives = {
+
     "palm oil": "ghee or coconut oil 🌿",
+
     "maida": "whole wheat flour 🌾",
+
     "milk": "almond or oat milk 🥛",
+
     "peanut": "sunflower or pumpkin seeds 🌻",
+
     "cashew": "roasted chana 🌰"
 }
 
@@ -226,21 +235,25 @@ def time_ago(t):
     else:
         return f"{diff.seconds // 3600}h ago"
 
-# 📝 Manual ingredient input
+# 📝 Ingredient input
 user_input = st.text_area("📝 Enter ingredients")
 
-# 📸 Ingredient image upload
+# 📸 Upload image
 uploaded_file = st.file_uploader(
     "📸 Upload ingredient image",
     type=["png", "jpg", "jpeg"]
 )
+
 image_text = ""
-# 📸 Show uploaded ingredient image
+
+# 📸 Show image
 if uploaded_file:
+
     image = Image.open(uploaded_file)
+
     st.image(image, use_column_width=True)
 
-# 🔍 Main button
+# 🔍 Check button
 if st.button("🔍 Check Ingredients"):
 
     st.markdown("### 🔍 Scanning ingredients...")
@@ -248,7 +261,9 @@ if st.button("🔍 Check Ingredients"):
     progress = st.progress(0)
 
     for i in range(100):
+
         time.sleep(0.01)
+
         progress.progress(i + 1)
 
     progress.empty()
@@ -264,12 +279,14 @@ if st.button("🔍 Check Ingredients"):
 
         response = requests.post(
             "https://api.ocr.space/parse/image",
+
             files={
                 "file": (
                     "img.png",
                     img_bytes.getvalue()
                 )
             },
+
             data={
                 "apikey": "helloworld"
             }
@@ -282,6 +299,7 @@ if st.button("🔍 Check Ingredients"):
             image_text = result["ParsedResults"][0]["ParsedText"]
 
             st.markdown("### 🧾 Extracted Text")
+
             st.write(image_text)
 
         else:
@@ -296,55 +314,63 @@ if st.button("🔍 Check Ingredients"):
     found = []
 
     if avoid_palm:
+
         found += [
             i for i in palm_oil_names
             if i in final_text
         ]
 
     if avoid_maida:
+
         found += [
             i for i in maida_names
             if i in final_text
         ]
 
     if avoid_milk:
+
         found += [
             i for i in milk_names
             if i in final_text
         ]
 
     if avoid_nuts:
+
         found += [
             i for i in nut_names
             if i in final_text
         ]
 
     found = list(set(found))
-# ⭐ Safety Score
 
-risk_count = len(found)
+    # ⭐ Safety Score
+    risk_count = len(found)
 
-safety_score = max(0, 100 - (risk_count * 25))
+    safety_score = max(0, 100 - (risk_count * 25))
 
-st.markdown("## ⭐ Product Safety Score")
+    st.markdown("## ⭐ Product Safety Score")
 
-st.progress(safety_score)
+    st.progress(safety_score)
 
-if safety_score >= 80:
+    if safety_score >= 80:
 
-    st.success(f"🟢 {safety_score}/100 Safe")
+        st.success(f"🟢 {safety_score}/100 Safe")
 
-elif safety_score >= 50:
+    elif safety_score >= 50:
 
-    st.warning(f"🟡 {safety_score}/100 Medium Risk")
+        st.warning(f"🟡 {safety_score}/100 Medium Risk")
 
-else:
+    else:
 
-    st.error(f"🔴 {safety_score}/100 Unsafe")
+        st.error(f"🔴 {safety_score}/100 Unsafe")
+
     # 🧾 Save history
     st.session_state.history.insert(0, {
+
         "text": final_text,
+
         "found": found,
+
         "time": datetime.now()
     })
 
@@ -355,19 +381,22 @@ else:
 
         for item in found:
 
+            st.info(f"❌ {item}")
+
             for key in explanations:
 
                 if key in item:
 
-                    st.info(f"""
-❌ {item}
+                    st.write(
+                        f"👉 {explanations.get(key, '')}"
+                    )
 
-👉 {explanations.get(key,"")}
-
-💡 Use {alternatives.get(key,"")} instead
-""")
+                    st.write(
+                        f"💡 Use {alternatives.get(key, '')} instead"
+                    )
 
     else:
+
         st.success("✅ Safe to Use")
 
 # 🧾 History
@@ -395,23 +424,15 @@ if st.session_state.selected:
 
         for item in data["found"]:
 
-            for key in explanations:
-
-                if key in item:
-
-                    st.info(f"""
-❌ {item}
-
-👉 {explanations.get(key,"")}
-
-💡 Use {alternatives.get(key,"")} instead
-""")
+            st.info(f"❌ {item}")
 
     else:
+
         st.success("✅ Safe")
 
 # 🗑️ Clear history
 if st.button("🗑️ Clear History"):
+
     st.session_state.history = []
 
 # 🌿 Footer
