@@ -4,8 +4,6 @@ from PIL import Image
 import io
 import time
 from datetime import datetime
-import cv2
-import numpy as np
 from pyzxing import BarCodeReader
 
 # 🌿 Page setup
