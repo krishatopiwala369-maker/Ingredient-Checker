@@ -6,6 +6,7 @@ import time
 from datetime import datetime
 import cv2
 import numpy as np
+from pyzxing import BarCodeReader
 
 # 🌿 Page setup
 st.set_page_config(
@@ -100,32 +101,101 @@ avoid_nuts = st.checkbox("🥜 Nuts")
 
 # 📦 Ingredient lists
 palm_oil_names = [
+
     "palm oil",
     "palmolein",
     "palm kernel oil",
+    "palm kernel",
+    "palm fruit oil",
+    "palm stearin",
+    "palm olein",
+    "vegetable oil",
+    "vegetable fat",
+    "hydrogenated vegetable oil",
+    "hydrogenated palm oil",
+    "fractionated palm oil",
+    "modified palm oil",
+    "palm shortening",
+    "shortening",
+
     "e471",
     "e472",
-    "shortening"
-]
+    "e481",
+    "e482",
 
+    "sodium laureth sulfate",
+    "glyceryl stearate",
+    "stearic acid",
+    "palmitic acid",
+    "cetyl alcohol",
+    "lauryl alcohol",
+    "lauric acid",
+
+    "mono and diglycerides",
+    "mono-diglycerides",
+
+    "emulsifier 471",
+    "emulsifier 472"
+]
 maida_names = [
+
     "maida",
     "refined wheat flour",
-    "all-purpose flour"
-]
+    "refined flour",
+    "all-purpose flour",
+    "bleached flour",
+    "white flour",
+    "enriched flour",
 
+    "refined cereal flour"
+]
 milk_names = [
+
     "milk",
+    "milk solids",
+    "milk powder",
+    "skimmed milk powder",
+    "whole milk powder",
+
     "whey",
     "casein",
-    "butter"
+    "caseinate",
+
+    "butter",
+    "butterfat",
+    "cream",
+    "cheese",
+
+    "lactose",
+    "curd",
+    "ghee",
+    "yogurt",
+    "paneer",
+
+    "milk protein",
+    "milk fat"
 ]
 
 nut_names = [
+
     "peanut",
+    "groundnut",
+
     "cashew",
     "almond",
-    "walnut"
+    "walnut",
+    "hazelnut",
+    "pecan",
+    "pistachio",
+    "macadamia",
+
+    "brazil nut",
+    "pine nut",
+
+    "nut paste",
+    "mixed nuts",
+
+    "tree nuts"
 ]
 
 # 💡 Explanations
@@ -178,32 +248,25 @@ barcode_file = st.file_uploader(
 
 image_text = ""
 barcode_data = ""
+reader = BarCodeReader()
 
 # 📦 Barcode scanner
 if barcode_file:
 
-    file_bytes = np.asarray(
-        bytearray(barcode_file.read()),
-        dtype=np.uint8
-    )
+    with open("temp_barcode.png", "wb") as f:
+        f.write(barcode_file.getbuffer())
 
-    img = cv2.imdecode(
-        file_bytes,
-        cv2.IMREAD_COLOR
-    )
+    result = reader.decode("temp_barcode.png")
 
-    detector = cv2.barcode.BarcodeDetector()
+    if result and result[0]["parsed"]:
 
-    decoded_info, decoded_type, points = detector.detectAndDecode(img)
-
-    if decoded_info:
-
-        barcode_data = decoded_info
+        barcode_data = result[0]["parsed"]
 
         st.success(f"📦 Barcode Detected: {barcode_data}")
 
     else:
         st.error("❌ No barcode detected")
+
 
 # 📸 Show uploaded ingredient image
 if uploaded_file:
