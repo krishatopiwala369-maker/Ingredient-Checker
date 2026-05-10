@@ -4,8 +4,6 @@ from PIL import Image
 import io
 import time
 from datetime import datetime
-from pyzxing import BarCodeReader
-
 # 🌿 Page setup
 st.set_page_config(
     page_title="Ingredient Checker",
@@ -236,37 +234,7 @@ uploaded_file = st.file_uploader(
     "📸 Upload ingredient image",
     type=["png", "jpg", "jpeg"]
 )
-
-# 📦 Barcode image upload
-barcode_file = st.file_uploader(
-    "📦 Upload barcode image",
-    type=["png", "jpg", "jpeg"],
-    key="barcode"
-)
-
 image_text = ""
-barcode_data = ""
-reader = BarCodeReader()
-
-# 📦 Barcode scanner
-if barcode_file:
-
-    with open("temp_barcode.png", "wb") as f:
-        f.write(barcode_file.getbuffer())
-
-    result = reader.decode("temp_barcode.png")
-    st.write(result)
-
-    if result and result[0]["parsed"]:
-
-        barcode_data = result[0]["parsed"]
-
-        st.success(f"📦 Barcode Detected: {barcode_data}")
-
-    else:
-        st.error("❌ No barcode detected")
-
-
 # 📸 Show uploaded ingredient image
 if uploaded_file:
     image = Image.open(uploaded_file)
@@ -352,23 +320,27 @@ if st.button("🔍 Check Ingredients"):
         ]
 
     found = list(set(found))
+# ⭐ Safety Score
 
-    # 📊 Risk Meter
-    risk_score = len(found)
+risk_count = len(found)
 
-    st.markdown("### 📊 Risk Level")
+safety_score = max(0, 100 - (risk_count * 25))
 
-    st.progress(min(risk_score * 25, 100))
+st.markdown("## ⭐ Product Safety Score")
 
-    if risk_score == 0:
-        st.success("🟢 Low Risk")
+st.progress(safety_score)
 
-    elif risk_score <= 2:
-        st.warning("🟡 Medium Risk")
+if safety_score >= 80:
 
-    else:
-        st.error("🔴 High Risk")
+    st.success(f"🟢 {safety_score}/100 Safe")
 
+elif safety_score >= 50:
+
+    st.warning(f"🟡 {safety_score}/100 Medium Risk")
+
+else:
+
+    st.error(f"🔴 {safety_score}/100 Unsafe")
     # 🧾 Save history
     st.session_state.history.insert(0, {
         "text": final_text,
