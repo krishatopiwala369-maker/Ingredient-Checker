@@ -255,6 +255,7 @@ if barcode_file:
         f.write(barcode_file.getbuffer())
 
     result = reader.decode("temp_barcode.png")
+    st.write(result)
 
     if result and result[0]["parsed"]:
 
